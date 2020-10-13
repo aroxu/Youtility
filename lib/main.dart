@@ -27,6 +27,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Youtility',
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -84,7 +85,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<bool> _mergeAudioAndVideo(
       String audioPath, String videoPath, String outputPath) async {
-    bool success;
+    bool success = false;
     try {
       await run(
               "ffmpeg",
