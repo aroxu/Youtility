@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math';
+import 'dart:io' show Platform;
 
 import 'package:Youtility/ui/animatedBackground.dart';
 import 'package:Youtility/ui/animatedWave.dart';
@@ -18,9 +19,7 @@ void main() {
     setWindowMinSize(Size(820, 600));
   }
   runApp(
-    Phoenix(
-      child: MyApp(),
-    ),
+    MyApp(),
   );
 }
 
@@ -33,7 +32,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       darkTheme: ThemeData.dark(),
-      home: MyHomePage(title: 'Youtility'),
+      home: Phoenix(child: MyHomePage(title: 'Youtility')),
     );
   }
 }
@@ -94,11 +93,11 @@ class _MyHomePageState extends State<MyHomePage> {
                 "$audioPath",
                 "-i",
                 "$videoPath",
-                "-c:a",
-                "aac",
+                "-c",
+                "copy",
                 "$outputPath"
               ],
-              verbose: false)
+              verbose: true)
           .then(
         (log) => _updateLogMessage("Merged Audio and Video using FFmpeg."),
       );
@@ -756,7 +755,17 @@ class _MyHomePageState extends State<MyHomePage> {
                       onPressed: () {
                         Widget okButton = FlatButton(
                           child: Text("확인"),
-                          onPressed: () {
+                          onPressed: () async {
+                            try {
+                              if (Platform.isWindows) {
+                                await run(
+                                    "taskkill", ["-f", "-im", "ffmpeg.exe"],
+                                    verbose: false);
+                              } else if (Platform.isMacOS || Platform.isLinux) {
+                                await run("killall", ["ffmpeg"],
+                                    verbose: false);
+                              }
+                            } catch (e) {}
                             Navigator.pop(context);
                             Phoenix.rebirth(context);
                           },
