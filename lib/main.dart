@@ -68,8 +68,12 @@ class _MyHomePageState extends State<MyHomePage> {
     bool isFFmpegAvailable;
     _updateLogMessage("Checking FFmpeg...");
     try {
-      await run("ffmpeg", [""], verbose: true);
-      isFFmpegAvailable = true;
+      var output = await run("ffmpeg", ["--help"], verbose: false);
+      if (output.exitCode == 1) {
+        isFFmpegAvailable = false;
+      } else {
+        isFFmpegAvailable = true;
+      }
     } catch (e) {
       isFFmpegAvailable = false;
     }
@@ -90,11 +94,11 @@ class _MyHomePageState extends State<MyHomePage> {
                 "$audioPath",
                 "-i",
                 "$videoPath",
-                "-c",
-                "copy",
+                "-c:a",
+                "aac",
                 "$outputPath"
               ],
-              verbose: true)
+              verbose: false)
           .then(
         (log) => _updateLogMessage("Merged Audio and Video using FFmpeg."),
       );
@@ -355,7 +359,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
                         AlertDialog alert = AlertDialog(
                           title: Text("경고"),
-                          content: Text("다운로드가 진행중입니다. 다운로드가 완료된 후 다시 시도해주세요."),
+                          content: Text("작업이 진행중입니다. 작업이 완료된 후 다시 시도해주세요."),
                           actions: [
                             okButton,
                           ],
@@ -426,7 +430,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             .replaceAll('|', '');
                         _updateLogMessage("Requesting directory permission...");
                         final audioResult = await file_chooser.showSavePanel(
-                          suggestedFileName: '${audioFileName}_audio',
+                          suggestedFileName: '${audioFileName}_audio.webm',
                           allowedFileTypes: const [
                             file_chooser.FileTypeFilterGroup(
                               label: '오디오 파일',
@@ -533,7 +537,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             .replaceAll('|', '');
                         _updateLogMessage("Requesting directory permission...");
                         final videoResult = await file_chooser.showSavePanel(
-                          suggestedFileName: '${videoFileName}_video',
+                          suggestedFileName: '${videoFileName}_video.webm',
                           allowedFileTypes: const [
                             file_chooser.FileTypeFilterGroup(
                               label: '비디오 파일',
@@ -610,7 +614,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           );
                         }
                         final mergeResult = await file_chooser.showSavePanel(
-                          suggestedFileName: '${target.title}'
+                          suggestedFileName: '${target.title}.mp4'
                               .replaceAll(r'\', '')
                               .replaceAll('/', '')
                               .replaceAll('*', '')
@@ -645,13 +649,13 @@ class _MyHomePageState extends State<MyHomePage> {
                           if (mergeFile.existsSync()) {
                             mergeFile.deleteSync();
                           }
+                          await audioOutput.close();
+                          await videoOutput.close();
                           if (!await _mergeAudioAndVideo(
                               audioFile.path, videoFile.path, mergeFile.path)) {
                             _updateLogMessage(
                                 "Failed to merge audio and video: $e");
                           }
-                          await audioOutput.close();
-                          await videoOutput.close();
                         } else {
                           isJobDone = true;
                           return _showSnackBar(
@@ -738,7 +742,6 @@ class _MyHomePageState extends State<MyHomePage> {
                           },
                         );
                       }
-                      isJobDone = true;
                     },
                     tooltip: '검색',
                     child: Icon(Icons.search),
@@ -767,7 +770,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
                         AlertDialog alert = AlertDialog(
                           title: Text("확인"),
-                          content: Text("다운로드를 중단하고 초기화 할까요?"),
+                          content: Text("진행중인 작업을 중단하고 초기화 할까요?"),
                           actions: [
                             cancelButton,
                             okButton,
