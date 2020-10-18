@@ -2,22 +2,22 @@
 
 ## Overall
 
-- Support Android [ ]
-- Support iOS [ ]
-- Support Windows [X]
-- Support macOS [X]
-- Support Linux [ ]
+- [ ] Support Android
+- [ ] Support iOS
+- [x] Support Windows
+- [x] Support macOS
+- [ ] Support Linux
 
 ## UI
 
-- Optimize UI for Android / iOS [ ]
-- Add advanced options [ ]
+- [ ] Optimize UI for Android / iOS
+- [ ] Add advanced options
 
 ## Features
 
-- Basic Encode / Decode [X]
-- Basic Audio / Video Download for Desktop Environment [X]
-- Basic Audio / Video Download for Mobile Environment [ ]
-- Change encode option [ ]
-- Add Custom FFmpeg argument option [ ]
-- Add Resolution Option [ ]
+- [x] Basic Encode / Decode
+- [x] Basic Audio / Video Download for Desktop Environment
+- [ ] Basic Audio / Video Download for Mobile Environment
+- [ ] Change encode option
+- [ ] Add Custom FFmpeg argument option
+- [ ] Add Resolution Option
