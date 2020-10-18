@@ -1,4 +1,4 @@
-# Youtility
+# youtility
 
 A new Flutter project.
 

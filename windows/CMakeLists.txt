@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
-project(Youtility LANGUAGES CXX)
+project(youtility LANGUAGES CXX)
 
-set(BINARY_NAME "Youtility")
+set(BINARY_NAME "youtility")
 
 cmake_policy(SET CMP0063 NEW)
 

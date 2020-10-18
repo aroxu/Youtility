@@ -2,8 +2,8 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:io' show Platform;
 
-import 'package:Youtility/ui/animatedBackground.dart';
-import 'package:Youtility/ui/animatedWave.dart';
+import 'package:youtility/ui/animatedBackground.dart';
+import 'package:youtility/ui/animatedWave.dart';
 import 'package:clippy/server.dart' as clippy;
 import 'package:flutter/material.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';

@@ -92,10 +92,10 @@ BEGIN
             VALUE "CompanyName", "io.aroxu" "\0"
             VALUE "FileDescription", "A new Flutter project." "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "Youtility" "\0"
+            VALUE "InternalName", "youtility" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2020 io.aroxu. All rights reserved." "\0"
-            VALUE "OriginalFilename", "Youtility.exe" "\0"
-            VALUE "ProductName", "Youtility" "\0"
+            VALUE "OriginalFilename", "youtility.exe" "\0"
+            VALUE "ProductName", "youtility" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
