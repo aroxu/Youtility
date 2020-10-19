@@ -422,18 +422,9 @@ class _ContentState extends State<Content> {
                         updateLogMessage("Video Target: $video");
 
                         var videoStream = yt.videos.streamsClient.get(video);
-                        var videoFileName = '${target.title}'
-                            .replaceAll(r'\', '')
-                            .replaceAll('/', '')
-                            .replaceAll('*', '')
-                            .replaceAll('?', '')
-                            .replaceAll('"', '')
-                            .replaceAll('<', '')
-                            .replaceAll('>', '')
-                            .replaceAll('|', '');
                         updateLogMessage("Requesting directory permission...");
                         final videoResult = await chooseFile(
-                            '${videoFileName}_video.webm', '비디오 파일', ['webm']);
+                            '${target.title}_video.webm', '비디오 파일', ['webm']);
                         if (!videoResult.canceled) {
                           updateLogMessage(
                               "File Destination: ${videoResult.paths[0]}");
