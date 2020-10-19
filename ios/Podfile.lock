@@ -4,12 +4,15 @@ PODS:
     - Flutter
     - mobile-ffmpeg-full (= 4.4.LTS)
   - mobile-ffmpeg-full (4.4.LTS)
+  - package_info (0.0.1):
+    - Flutter
   - url_launcher (0.0.1):
     - Flutter
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_ffmpeg/full-lts (from `.symlinks/plugins/flutter_ffmpeg/ios`)
+  - package_info (from `.symlinks/plugins/package_info/ios`)
   - url_launcher (from `.symlinks/plugins/url_launcher/ios`)
 
 SPEC REPOS:
@@ -21,6 +24,8 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_ffmpeg:
     :path: ".symlinks/plugins/flutter_ffmpeg/ios"
+  package_info:
+    :path: ".symlinks/plugins/package_info/ios"
   url_launcher:
     :path: ".symlinks/plugins/url_launcher/ios"
 
@@ -28,6 +33,7 @@ SPEC CHECKSUMS:
   Flutter: 0e3d915762c693b495b44d77113d4970485de6ec
   flutter_ffmpeg: 657ce8a1502c3d25bf34efc58b380b248836f772
   mobile-ffmpeg-full: f17c82219b4ff9e4018b5e21f88b78c28a3475db
+  package_info: 873975fc26034f0b863a300ad47e7f1ac6c7ec62
   url_launcher: 6fef411d543ceb26efce54b05a0a40bfd74cbbef
 
 PODFILE CHECKSUM: 1913207c2a0de774ef4601cb43b81d526c476999

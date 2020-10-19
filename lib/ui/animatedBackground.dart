@@ -9,7 +9,7 @@ class AnimatedBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final tween = MultiTween<_BgProps>()
       ..add(
-          _BgProps.color1, Color(0xffD38312).tweenTo(Colors.lightBlue.shade900))
+          _BgProps.color1, Color(0xffFFB84E).tweenTo(Colors.lightBlue.shade900))
       ..add(_BgProps.color2, Color(0xffA83279).tweenTo(Colors.blue.shade600));
 
     return MirrorAnimation<MultiTweenValues<_BgProps>>(

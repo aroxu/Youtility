@@ -29,6 +29,8 @@ dependencies:
   simple_animations: ^2.2.2
   clippy: ^1.0.0
   url_launcher: ^5.7.2
+  flutter_ffmpeg: ^0.3.0
+  package_info: ^0.4.3
   file_chooser:
     git:
       url: git://github.com/google/flutter-desktop-embedding.git
