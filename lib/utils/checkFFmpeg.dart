@@ -11,11 +11,9 @@ Future<bool> checkFFmpeg() async {
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     try {
       var output = await run("ffmpeg", ["--help"], verbose: false);
-      if (output.exitCode == 1) {
-        isFFmpegAvailable = false;
-      } else {
-        isFFmpegAvailable = true;
-      }
+      output.exitCode == 0
+          ? isFFmpegAvailable = true
+          : isFFmpegAvailable = false;
     } catch (e) {
       isFFmpegAvailable = false;
     }

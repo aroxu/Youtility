@@ -3,10 +3,11 @@ import 'dart:math';
 
 import 'package:Youtility/ui/animatedBackground.dart';
 import 'package:Youtility/ui/animatedWave.dart';
+import 'package:Youtility/ui/downloadOption.dart';
 import 'package:Youtility/utils/checkFFmpeg.dart';
 import 'package:Youtility/utils/fileChooser.dart';
 import 'package:Youtility/utils/logMessage.dart';
-import 'package:Youtility/utils/mergeAudioAndVideo.dart';
+import 'package:Youtility/utils/encoder.dart';
 import 'package:Youtility/utils/mobileFFmpegManager.dart';
 import 'package:flutter/material.dart';
 import 'package:Youtility/global.dart' as global;
@@ -46,7 +47,13 @@ class _ContentState extends State<Content> {
       );
 
       AlertDialog alert = AlertDialog(
-        title: Text("오류"),
+        title: Row(children: [
+          Icon(Icons.error),
+          Padding(
+            padding: EdgeInsets.only(right: 4),
+          ),
+          Text("오류"),
+        ]),
         // ignore: unnecessary_brace_in_string_interps
         content: Text("URL을 열 수 없습니다. 브라우저에서 ${url}을 열어주세요."),
         actions: [
@@ -158,6 +165,44 @@ class _ContentState extends State<Content> {
                                 style: TextStyle(fontSize: 24),
                               ),
                   ),
+                  RaisedButton.icon(
+                    icon: Icon(Icons.settings),
+                    label: Text("다운로드 옵션"),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18.0),
+                    ),
+                    textColor: Colors.white,
+                    color: Colors.black,
+                    onPressed: () {
+                      Widget okButton = FlatButton(
+                        child: Text("확인"),
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                      );
+
+                      AlertDialog alert = AlertDialog(
+                        title: Row(children: [
+                          Icon(Icons.settings),
+                          Padding(
+                            padding: EdgeInsets.only(right: 4),
+                          ),
+                          Text("다운로드 옵션"),
+                        ]),
+                        content: DownloadOption(),
+                        actions: [
+                          okButton,
+                        ],
+                      );
+                      return showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (BuildContext context) {
+                          return alert;
+                        },
+                      );
+                    },
+                  )
                 ],
               ),
             ),
@@ -199,8 +244,45 @@ class _ContentState extends State<Content> {
                         );
 
                         AlertDialog alert = AlertDialog(
-                          title: Text("경고"),
+                          title: Row(children: [
+                            Icon(Icons.warning),
+                            Padding(
+                              padding: EdgeInsets.only(right: 4),
+                            ),
+                            Text("경고"),
+                          ]),
                           content: Text("YouTube URL을 입력해주세요."),
+                          actions: [
+                            okButton,
+                          ],
+                        );
+
+                        return showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (BuildContext context) {
+                            return alert;
+                          },
+                        );
+                      }
+
+                      if (!global.isJobDone) {
+                        Widget okButton = FlatButton(
+                          child: Text("확인"),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                        );
+
+                        AlertDialog alert = AlertDialog(
+                          title: Row(children: [
+                            Icon(Icons.warning),
+                            Padding(
+                              padding: EdgeInsets.only(right: 4),
+                            ),
+                            Text("경고"),
+                          ]),
+                          content: Text("작업이 진행중입니다. 작업이 완료된 후 다시 시도해주세요."),
                           actions: [
                             okButton,
                           ],
@@ -238,7 +320,13 @@ class _ContentState extends State<Content> {
                         );
 
                         AlertDialog alert = AlertDialog(
-                          title: Text("경고"),
+                          title: Row(children: [
+                            Icon(Icons.warning),
+                            Padding(
+                              padding: EdgeInsets.only(right: 4),
+                            ),
+                            Text("경고"),
+                          ]),
                           content: Text(
                               "FFmpeg가 발견되지 않아, 영상을 다운로드 하고 변환할 수 없습니다. 계속 하시겠습니까?"),
                           actions: [
@@ -261,30 +349,6 @@ class _ContentState extends State<Content> {
 
                       if (!ffmpegChecked) return;
 
-                      if (!global.isJobDone) {
-                        Widget okButton = FlatButton(
-                          child: Text("확인"),
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                        );
-
-                        AlertDialog alert = AlertDialog(
-                          title: Text("경고"),
-                          content: Text("작업이 진행중입니다. 작업이 완료된 후 다시 시도해주세요."),
-                          actions: [
-                            okButton,
-                          ],
-                        );
-
-                        return showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (BuildContext context) {
-                            return alert;
-                          },
-                        );
-                      }
                       global.isJobDone = false;
 
                       try {
@@ -297,7 +361,7 @@ class _ContentState extends State<Content> {
                               ),
                             ],
                           ),
-                          Duration(milliseconds: 5000),
+                          Duration(milliseconds: 2500),
                         );
                         var yt = YoutubeExplode();
                         var id = VideoId(youtubeURL.text.trim());
@@ -319,7 +383,7 @@ class _ContentState extends State<Content> {
                               ),
                             ],
                           ),
-                          Duration(milliseconds: 5000),
+                          Duration(milliseconds: 2500),
                         );
                         updateLogMessage(
                             "Found Video ${target.title}, Duration: ${target.duration.toString().split(".")[0]}");
@@ -331,13 +395,12 @@ class _ContentState extends State<Content> {
                         var audio = manifest.audioOnly.withHighestBitrate();
                         updateLogMessage("Audio Target: $audio");
                         var audioStream = yt.videos.streamsClient.get(audio);
-                        updateLogMessage("Requesting directory permission...");
-                        final audioResult = await chooseFile(
-                            '${target.title}_audio.webm', '오디오 파일', ['webm']);
-                        if (!audioResult.canceled) {
+                        final destination = await chooseFile(
+                            '${target.title}.mp4', '비디오 파일', ['mp4']);
+                        if (!destination.canceled) {
                           updateLogMessage(
-                              "File Destination: ${audioResult.paths[0]}");
-                          audioFile = File(audioResult.paths[0]);
+                              "File Destination: ${destination.paths[0]}_audio.mp4");
+                          audioFile = File("${destination.paths[0]}_audio.mp4");
                           if (audioFile.existsSync()) {
                             audioFile.deleteSync();
                           }
@@ -379,56 +442,36 @@ class _ContentState extends State<Content> {
                                 Icon(Icons.file_download_done),
                                 SizedBox(width: 4),
                                 Flexible(
-                                  child: Text(
-                                      '${audioResult.paths[0]} 위치에 다운로드가 완료되었습니다.'),
+                                  child: Text('오디오 다운로드가 완료되었습니다.'),
                                 )
                               ],
                             ),
-                            Duration(milliseconds: 5000),
+                            Duration(milliseconds: 2500),
                           );
-                        } else {
-                          global.isJobDone = true;
-                          return _showSnackBar(
-                            Row(
-                              children: [
-                                Icon(Icons.cancel),
-                                SizedBox(width: 4),
-                                Flexible(
-                                  child: Text('다운로드가 취소되었습니다.'),
-                                )
-                              ],
-                            ),
-                            Duration(milliseconds: 5000),
-                          );
-                        }
-                        for (var target
-                            in manifest.videoOnly.sortByVideoQuality()) {
-                          updateLogMessage("Found Video: $target");
-                        }
+                          for (var target
+                              in manifest.videoOnly.sortByVideoQuality()) {
+                            updateLogMessage("Found Video: $target");
+                          }
 
-                        var _video = manifest.videoOnly
-                            .sortByVideoQuality()
-                            .indexWhere((element) =>
-                                element.toString().contains("HDR | webm"));
-                        if (_video == -1) {
-                          _video = manifest.videoOnly
+                          var _video = manifest.videoOnly
                               .sortByVideoQuality()
                               .indexWhere((element) =>
-                                  element.toString().contains("webm"));
-                        }
+                                  element.toString().contains("HDR | webm"));
+                          if (_video == -1) {
+                            _video = manifest.videoOnly
+                                .sortByVideoQuality()
+                                .indexWhere((element) =>
+                                    element.toString().contains("webm"));
+                          }
+                          var video =
+                              manifest.videoOnly.sortByVideoQuality()[_video];
+                          updateLogMessage("Video Target: $video");
 
-                        var video =
-                            manifest.videoOnly.sortByVideoQuality()[_video];
-                        updateLogMessage("Video Target: $video");
-
-                        var videoStream = yt.videos.streamsClient.get(video);
-                        updateLogMessage("Requesting directory permission...");
-                        final videoResult = await chooseFile(
-                            '${target.title}_video.webm', '비디오 파일', ['webm']);
-                        if (!videoResult.canceled) {
+                          var videoStream = yt.videos.streamsClient.get(video);
                           updateLogMessage(
-                              "File Destination: ${videoResult.paths[0]}");
-                          videoFile = File(videoResult.paths[0]);
+                              "File Destination: ${destination.paths[0]}_video.webm");
+                          videoFile =
+                              File("${destination.paths[0]}_video.webm");
                           if (videoFile.existsSync()) {
                             videoFile.deleteSync();
                           }
@@ -471,31 +514,12 @@ class _ContentState extends State<Content> {
                                 Icon(Icons.file_download_done),
                                 SizedBox(width: 4),
                                 Flexible(
-                                  child: Text(
-                                      '${videoResult.paths[0]} 위치에 다운로드가 완료되었습니다.'),
+                                  child: Text('비디오 다운로드가 완료되었습니다.'),
                                 ),
                               ],
                             ),
-                            Duration(milliseconds: 5000),
+                            Duration(milliseconds: 2500),
                           );
-                        } else {
-                          global.isJobDone = true;
-                          return _showSnackBar(
-                            Row(
-                              children: [
-                                Icon(Icons.cancel),
-                                SizedBox(width: 4),
-                                Flexible(
-                                  child: Text('다운로드가 취소되었습니다.'),
-                                )
-                              ],
-                            ),
-                            Duration(milliseconds: 5000),
-                          );
-                        }
-                        final mergeResult = await chooseFile(
-                            '${target.title}.mp4', '비디오 파일', ['mp4']);
-                        if (!mergeResult.canceled) {
                           _showSnackBar(
                             Row(
                               children: [
@@ -510,18 +534,51 @@ class _ContentState extends State<Content> {
                           );
                           updateLogMessage(
                               "Requesting directory permission...");
-                          var mergeFile = File(mergeResult.paths[0]);
+                          var mergeFile = File(destination.paths[0]);
                           if (mergeFile.existsSync()) {
                             mergeFile.deleteSync();
                           }
                           await audioOutput.close();
                           await videoOutput.close();
-                          var mergerResult = await mergeAudioAndVideo(
+                          var mergerResult = await encodeWithAudioAndVideo(
                               audioFile.path, videoFile.path, mergeFile.path);
                           if (!mergerResult[0]) {
                             updateLogMessage(
                                 "Failed to merge audio and video: ${mergerResult[1]}");
                           }
+                          global.isJobDone = true;
+                          Widget okButton = FlatButton(
+                            child: Text("확인"),
+                            onPressed: () {
+                              try {
+                                Scaffold.of(context).hideCurrentSnackBar();
+                              } catch (e) {}
+                              Navigator.pop(context);
+                            },
+                          );
+
+                          AlertDialog alert = AlertDialog(
+                            title: Row(children: [
+                              Icon(Icons.file_download_done),
+                              Padding(
+                                padding: EdgeInsets.only(right: 4),
+                              ),
+                              Text("완료"),
+                            ]),
+                            content:
+                                Text("영상이 ${destination.paths[0]}에 저장되었습니다."),
+                            actions: [
+                              okButton,
+                            ],
+                          );
+
+                          return showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (BuildContext context) {
+                              return alert;
+                            },
+                          );
                         } else {
                           global.isJobDone = true;
                           return _showSnackBar(
@@ -534,36 +591,9 @@ class _ContentState extends State<Content> {
                                 )
                               ],
                             ),
-                            Duration(milliseconds: 5000),
+                            Duration(milliseconds: 2500),
                           );
                         }
-                        global.isJobDone = true;
-                        Widget okButton = FlatButton(
-                          child: Text("확인"),
-                          onPressed: () {
-                            try {
-                              Scaffold.of(context).hideCurrentSnackBar();
-                            } catch (e) {}
-                            Navigator.pop(context);
-                          },
-                        );
-
-                        AlertDialog alert = AlertDialog(
-                          title: Text("완료"),
-                          content:
-                              Text("영상이 ${mergeResult.paths[0]}에 저장되었습니다."),
-                          actions: [
-                            okButton,
-                          ],
-                        );
-
-                        return showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (BuildContext context) {
-                            return alert;
-                          },
-                        );
                       } catch (e) {
                         updateLogMessage("Error Occured: $e");
                         Widget okButton = FlatButton(
@@ -581,7 +611,13 @@ class _ContentState extends State<Content> {
                                 .contains('Invalid YouTube video ID or URL') ==
                             true) {
                           alert = AlertDialog(
-                            title: Text("오류"),
+                            title: Row(children: [
+                              Icon(Icons.error),
+                              Padding(
+                                padding: EdgeInsets.only(right: 4),
+                              ),
+                              Text("오류"),
+                            ]),
                             content: Text("올바른 YouTube URL을 입력해주세요."),
                             actions: [
                               okButton,
@@ -590,7 +626,13 @@ class _ContentState extends State<Content> {
                         } else {
                           // set up the AlertDialog
                           alert = AlertDialog(
-                            title: Text("오류"),
+                            title: Row(children: [
+                              Icon(Icons.error),
+                              Padding(
+                                padding: EdgeInsets.only(right: 4),
+                              ),
+                              Text("오류"),
+                            ]),
                             content: Text("다운로드를 시도하는중 오류가 발생했습니다.\n$e"),
                             actions: [
                               okButton,
@@ -640,8 +682,11 @@ class _ContentState extends State<Content> {
                               }
                             } catch (e) {}
                             Navigator.pop(context);
-                            global.audioProgress = -1;
-                            global.videoProgress = -1;
+                            setState(() {
+                              global.audioProgress = -1;
+                              global.videoProgress = -1;
+                            });
+                            global.isJobDone = true;
                             Phoenix.rebirth(context);
                           },
                         );
@@ -653,7 +698,13 @@ class _ContentState extends State<Content> {
                         );
 
                         AlertDialog alert = AlertDialog(
-                          title: Text("확인"),
+                          title: Row(children: [
+                            Icon(Icons.priority_high),
+                            Padding(
+                              padding: EdgeInsets.only(right: 4),
+                            ),
+                            Text("확인"),
+                          ]),
                           content: Text("진행중인 작업을 중단하고 초기화 할까요?"),
                           actions: [
                             cancelButton,
@@ -697,7 +748,13 @@ class _ContentState extends State<Content> {
                         );
 
                         AlertDialog alert = AlertDialog(
-                          title: Text("정보"),
+                          title: Row(children: [
+                            Icon(Icons.info),
+                            Padding(
+                              padding: EdgeInsets.only(right: 4),
+                            ),
+                            Text("정보"),
+                          ]),
                           content: SingleChildScrollView(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.start,

@@ -23,7 +23,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  youtube_explode_dart: ^1.5.2
+  youtube_explode_dart: ^1.6.1
   flutter_phoenix: ^0.1.0
   process_run: ^0.11.0+2
   simple_animations: ^2.2.2
