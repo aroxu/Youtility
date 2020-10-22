@@ -1,5 +1,5 @@
 # Uncomment this line to define a global platform for your project
-# platform :ios, '9.0'
+platform :ios, '9.3'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -48,7 +48,7 @@ def flutter_install_ios_plugin_pods(ios_application_path = nil)
       File.symlink(plugin_path, symlink)
 
       if plugin_name == 'flutter_ffmpeg'
-          pod 'flutter_ffmpeg/full-lts', :path => File.join('.symlinks', 'plugins', plugin_name, 'ios')
+          pod 'flutter_ffmpeg/full-gpl-lts', :path => File.join('.symlinks', 'plugins', plugin_name, 'ios')
       else
           pod plugin_name, :path => File.join('.symlinks', 'plugins', plugin_name, 'ios')
       end

@@ -14,7 +14,9 @@ void main() {
     setWindowMinSize(Size(820, 600));
   }
   runApp(
-    Youtility(),
+    Phoenix(
+      child: Youtility(),
+    ),
   );
 }
 
@@ -28,7 +30,7 @@ class Youtility extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       darkTheme: ThemeData.dark(),
-      home: Phoenix(child: MainPage(title: 'Youtility')),
+      home: MainPage(title: 'Youtility'),
     );
   }
 }

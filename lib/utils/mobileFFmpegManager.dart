@@ -1,9 +1,9 @@
 import 'package:Youtility/global.dart' as global;
 import 'package:Youtility/utils/logMessage.dart';
 
-Future<void> stopMobileFFmpeg(int executionId) async {
+Future<void> stopMobileFFmpeg() async {
   try {
-    await global.mobileFFmpeg.cancelExecution(executionId);
+    await global.mobileFFmpeg.cancel();
   } catch (e) {
     updateLogMessage("Fained to stop ffmpeg: $e");
   }

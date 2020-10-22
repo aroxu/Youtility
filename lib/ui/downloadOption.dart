@@ -34,6 +34,10 @@ class _DownloadOptionState extends State<DownloadOption> {
                 groupValue: global.currentDownloadOption,
                 onChanged: (value) {
                   setState(() {
+                    if (global.currentAudioFileExtension ==
+                            global.AudioFileExtension.MP3 &&
+                        global.currentAudioEncodeOption ==
+                            global.AudioEncodeOption.ALAC) return;
                     global.currentDownloadOption = value;
                   });
                 },
@@ -44,6 +48,10 @@ class _DownloadOptionState extends State<DownloadOption> {
                 groupValue: global.currentDownloadOption,
                 onChanged: (value) {
                   setState(() {
+                    if (global.currentVideoFileExtension ==
+                            global.VideoFileExtension.MOV &&
+                        global.currentVideoEncodeOption ==
+                            global.VideoEncodeOption.VP9) return;
                     global.currentDownloadOption = value;
                   });
                 },
@@ -54,86 +62,167 @@ class _DownloadOptionState extends State<DownloadOption> {
                 groupValue: global.currentDownloadOption,
                 onChanged: (value) {
                   setState(() {
+                    if (global.currentVideoFileExtension ==
+                            global.VideoFileExtension.MOV &&
+                        global.currentVideoEncodeOption ==
+                            global.VideoEncodeOption.VP9) return;
                     global.currentDownloadOption = value;
                   });
                 },
               ),
-              CheckboxListTile(
-                title: Text(
-                    "오디오와 비디오를 단일파일로 저장\n(저장방식 옵션이 '오디오와 비디오' 일때만 변경 가능합니다.)"),
-                onChanged:
-                    global.currentDownloadOption == global.DownloadOption.Both
-                        ? (bool value) {
-                            setState(() {
-                              global.autoMergeEnabled = value;
-                            });
-                          }
-                        : null,
-                value: global.autoMergeEnabled,
-              ),
             ],
           ),
           ExpansionTile(
+            initiallyExpanded: true,
             title: Text(
-              "오디오 인코딩 옵션",
+              "오디오 코덱 옵션",
               style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
             ),
             children: <Widget>[
               RadioListTile(
-                title: Text('aac'),
+                title: Text('AAC'),
                 value: global.AudioEncodeOption.AAC,
                 groupValue: global.currentAudioEncodeOption,
                 onChanged: (value) {
                   setState(() {
-                    global.currentDownloadOption = value;
+                    global.currentAudioEncodeOption = value;
                   });
                 },
               ),
               RadioListTile(
-                title: Text('opus(일부 프로그램에서 정상적으로 인식 못할 수 있음)'),
-                value: global.AudioEncodeOption.OPUS,
+                title: Text('ALAC(mp3 오디오 확장자 / mp4 비디오 확장자 사용시 사용불가능)'),
+                value: global.AudioEncodeOption.ALAC,
                 groupValue: global.currentAudioEncodeOption,
                 onChanged: (value) {
                   setState(() {
-                    global.currentDownloadOption = value;
+                    if ((global.currentDownloadOption ==
+                                global.DownloadOption.AudioOnly &&
+                            global.currentAudioFileExtension ==
+                                global.AudioFileExtension.MP3) ||
+                        (global.currentDownloadOption ==
+                                global.DownloadOption.Both &&
+                            global.currentVideoFileExtension ==
+                                global.VideoFileExtension.MP4)) return;
+                    global.currentAudioEncodeOption = value;
                   });
                 },
               ),
             ],
           ),
           ExpansionTile(
+            initiallyExpanded: true,
             title: Text(
-              "비디오 인코딩 옵션",
+              "오디오 확장자 옵션",
               style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
             ),
             children: <Widget>[
               RadioListTile(
-                title: Text('vp9'),
+                title: Text('mp3'),
+                value: global.AudioFileExtension.MP3,
+                groupValue: global.currentAudioFileExtension,
+                onChanged: (value) {
+                  setState(() {
+                    if (global.currentDownloadOption ==
+                            global.DownloadOption.AudioOnly &&
+                        global.currentAudioEncodeOption ==
+                            global.AudioEncodeOption.ALAC) return;
+                    global.currentAudioFileExtension = value;
+                  });
+                },
+              ),
+              RadioListTile(
+                title: Text('m4a'),
+                value: global.AudioFileExtension.M4A,
+                groupValue: global.currentAudioFileExtension,
+                onChanged: (value) {
+                  setState(() {
+                    global.currentAudioFileExtension = value;
+                  });
+                },
+              ),
+            ],
+          ),
+          ExpansionTile(
+            initiallyExpanded: true,
+            title: Text(
+              "비디오 코덱 옵션",
+              style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+            ),
+            children: <Widget>[
+              RadioListTile(
+                title: Text('VP9(mov 비디오 확장자 사용시 사용불가능)'),
                 value: global.VideoEncodeOption.VP9,
                 groupValue: global.currentVideoEncodeOption,
                 onChanged: (value) {
                   setState(() {
-                    global.currentDownloadOption = value;
+                    if ((global.currentDownloadOption ==
+                                global.DownloadOption.Both &&
+                            global.currentVideoFileExtension ==
+                                global.VideoFileExtension.MOV) ||
+                        (global.currentDownloadOption ==
+                                global.DownloadOption.VideoOnly &&
+                            global.currentVideoFileExtension ==
+                                global.VideoFileExtension.MOV)) return;
+                    global.currentVideoEncodeOption = value;
                   });
                 },
               ),
               RadioListTile(
-                title: Text('h264'),
+                title: Text('H264'),
                 value: global.VideoEncodeOption.H264,
                 groupValue: global.currentVideoEncodeOption,
                 onChanged: (value) {
                   setState(() {
-                    global.currentDownloadOption = value;
+                    global.currentVideoEncodeOption = value;
                   });
                 },
               ),
               RadioListTile(
-                title: Text('mpeg4'),
-                value: global.VideoEncodeOption.MPEG4,
+                title: Text('HEVC'),
+                value: global.VideoEncodeOption.HEVC,
                 groupValue: global.currentVideoEncodeOption,
                 onChanged: (value) {
                   setState(() {
-                    global.currentDownloadOption = value;
+                    global.currentVideoEncodeOption = value;
+                  });
+                },
+              ),
+            ],
+          ),
+          ExpansionTile(
+            initiallyExpanded: true,
+            title: Text(
+              "비디오 확장자 옵션",
+              style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+            ),
+            children: <Widget>[
+              RadioListTile(
+                title: Text('mp4(ALAC 오디오 코덱 사용시 사용불가능)'),
+                value: global.VideoFileExtension.MP4,
+                groupValue: global.currentVideoFileExtension,
+                onChanged: (value) {
+                  setState(() {
+                    if (global.currentAudioEncodeOption ==
+                        global.AudioEncodeOption.ALAC) return;
+                    global.currentVideoFileExtension = value;
+                  });
+                },
+              ),
+              RadioListTile(
+                title: Text('mov(VP9 비디오 코덱 사용시 사용불가능)'),
+                value: global.VideoFileExtension.MOV,
+                groupValue: global.currentVideoFileExtension,
+                onChanged: (value) {
+                  setState(() {
+                    if (global.currentDownloadOption ==
+                                global.DownloadOption.Both &&
+                            (global.currentVideoEncodeOption ==
+                                global.VideoEncodeOption.VP9) ||
+                        global.currentDownloadOption ==
+                                global.DownloadOption.VideoOnly &&
+                            (global.currentVideoEncodeOption ==
+                                global.VideoEncodeOption.VP9)) return;
+                    global.currentVideoFileExtension = value;
                   });
                 },
               ),

@@ -1,41 +1,65 @@
 PODS:
-  - Flutter (1.0.0)
-  - flutter_ffmpeg/full-lts (0.3.0):
+  - downloads_path_provider_28 (0.0.1):
     - Flutter
-    - mobile-ffmpeg-full (= 4.4.LTS)
-  - mobile-ffmpeg-full (4.4.LTS)
+  - esys_flutter_share (0.0.1):
+    - Flutter
+  - Flutter (1.0.0)
+  - flutter_ffmpeg/full-gpl-lts (0.3.0):
+    - Flutter
+    - mobile-ffmpeg-full-gpl (= 4.4.LTS)
+  - mobile-ffmpeg-full-gpl (4.4.LTS)
   - package_info (0.0.1):
+    - Flutter
+  - path_provider (0.0.1):
+    - Flutter
+  - "permission_handler (5.0.1+1)":
     - Flutter
   - url_launcher (0.0.1):
     - Flutter
 
 DEPENDENCIES:
+  - downloads_path_provider_28 (from `.symlinks/plugins/downloads_path_provider_28/ios`)
+  - esys_flutter_share (from `.symlinks/plugins/esys_flutter_share/ios`)
   - Flutter (from `Flutter`)
-  - flutter_ffmpeg/full-lts (from `.symlinks/plugins/flutter_ffmpeg/ios`)
+  - flutter_ffmpeg/full-gpl-lts (from `.symlinks/plugins/flutter_ffmpeg/ios`)
   - package_info (from `.symlinks/plugins/package_info/ios`)
+  - path_provider (from `.symlinks/plugins/path_provider/ios`)
+  - permission_handler (from `.symlinks/plugins/permission_handler/ios`)
   - url_launcher (from `.symlinks/plugins/url_launcher/ios`)
 
 SPEC REPOS:
   trunk:
-    - mobile-ffmpeg-full
+    - mobile-ffmpeg-full-gpl
 
 EXTERNAL SOURCES:
+  downloads_path_provider_28:
+    :path: ".symlinks/plugins/downloads_path_provider_28/ios"
+  esys_flutter_share:
+    :path: ".symlinks/plugins/esys_flutter_share/ios"
   Flutter:
     :path: Flutter
   flutter_ffmpeg:
     :path: ".symlinks/plugins/flutter_ffmpeg/ios"
   package_info:
     :path: ".symlinks/plugins/package_info/ios"
+  path_provider:
+    :path: ".symlinks/plugins/path_provider/ios"
+  permission_handler:
+    :path: ".symlinks/plugins/permission_handler/ios"
   url_launcher:
     :path: ".symlinks/plugins/url_launcher/ios"
 
 SPEC CHECKSUMS:
+  downloads_path_provider_28: 7425048683ec0b86238361bd93795e91c2bc61a2
+  esys_flutter_share: 403498dab005b36ce1f8d7aff377e81f0621b0b4
   Flutter: 0e3d915762c693b495b44d77113d4970485de6ec
   flutter_ffmpeg: 657ce8a1502c3d25bf34efc58b380b248836f772
-  mobile-ffmpeg-full: f17c82219b4ff9e4018b5e21f88b78c28a3475db
+  mobile-ffmpeg-full-gpl: 9d7a8ec95457e39f9c1efe14b848f41798efa684
   package_info: 873975fc26034f0b863a300ad47e7f1ac6c7ec62
+  path_provider: abfe2b5c733d04e238b0d8691db0cfd63a27a93c
+  permission_handler: eac8e15b4a1a3fba55b761d19f3f4e6b005d15b6
   url_launcher: 6fef411d543ceb26efce54b05a0a40bfd74cbbef
 
-PODFILE CHECKSUM: 1913207c2a0de774ef4601cb43b81d526c476999
+PODFILE CHECKSUM: ba4741e24b690f72ceca4e6c6cd96efdf7257b7d
 
 COCOAPODS: 1.9.3

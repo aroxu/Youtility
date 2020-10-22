@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
@@ -13,10 +14,10 @@ import 'package:flutter/material.dart';
 import 'package:Youtility/global.dart' as global;
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:package_info/package_info.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:process_run/process_run.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
-import 'package:clippy/server.dart' as clippy;
 
 class Content extends StatefulWidget {
   @override
@@ -32,6 +33,11 @@ Widget onBottom(Widget child) => Positioned.fill(
 
 class _ContentState extends State<Content> {
   final youtubeURL = TextEditingController();
+
+  String _encodeTexts = global.currentDownloadOption ==
+          global.DownloadOption.AudioOnly
+      ? "오디오 인코딩중...\n팁: ${global.encodeingTexts[new Random().nextInt(global.encodeingTexts.length - 1)]}"
+      : "비디오 인코딩중...\n팁: ${global.encodeingTexts[new Random().nextInt(global.encodeingTexts.length - 1)]}";
 
   _launchURL(String url) async {
     if (await canLaunch(url)) {
@@ -70,6 +76,25 @@ class _ContentState extends State<Content> {
       );
       return false;
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    const oneSecond = const Duration(seconds: 5);
+    new Timer.periodic(
+        oneSecond,
+        (Timer t) => {
+              if (global.isEncoding)
+                {
+                  setState(() {
+                    _encodeTexts = global.currentDownloadOption ==
+                            global.DownloadOption.AudioOnly
+                        ? "오디오 인코딩중...\n팁: ${global.encodeingTexts[new Random().nextInt(global.encodeingTexts.length - 1)]}"
+                        : "비디오 인코딩중...\n팁: ${global.encodeingTexts[new Random().nextInt(global.encodeingTexts.length - 1)]}";
+                  })
+                }
+            });
   }
 
   @override
@@ -159,11 +184,17 @@ class _ContentState extends State<Content> {
                                   ),
                                 ],
                               )
-                            : Text(
-                                "다운로드 준비됨",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 24),
-                              ),
+                            : global.isEncoding
+                                ? Text(
+                                    _encodeTexts,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 18),
+                                  )
+                                : Text(
+                                    "다운로드 준비됨",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 24),
+                                  ),
                   ),
                   RaisedButton.icon(
                     icon: Icon(Icons.settings),
@@ -346,7 +377,6 @@ class _ContentState extends State<Content> {
                       } else {
                         ffmpegChecked = true;
                       }
-
                       if (!ffmpegChecked) return;
 
                       global.isJobDone = false;
@@ -395,204 +425,906 @@ class _ContentState extends State<Content> {
                         var audio = manifest.audioOnly.withHighestBitrate();
                         updateLogMessage("Audio Target: $audio");
                         var audioStream = yt.videos.streamsClient.get(audio);
-                        final destination = await chooseFile(
-                            '${target.title}.mp4', '비디오 파일', ['mp4']);
-                        if (!destination.canceled) {
-                          updateLogMessage(
-                              "File Destination: ${destination.paths[0]}_audio.mp4");
-                          audioFile = File("${destination.paths[0]}_audio.mp4");
-                          if (audioFile.existsSync()) {
-                            audioFile.deleteSync();
-                          }
-                          audioOutput = audioFile.openWrite(
-                              mode: FileMode.writeOnlyAppend);
-                          var audioLen = audio.size.totalBytes;
-                          var audioCount = -1;
-                          updateLogMessage("Started Download.");
-                          _showSnackBar(
-                            Row(
-                              children: [
-                                Icon(Icons.cloud_download),
-                                SizedBox(width: 4),
-                                Flexible(
-                                  child: Text('오디오 다운로드중...'),
+
+                        String audioDownloadFileExtention = "";
+                        String videoDownloadFileExtention = "";
+                        if (global.currentAudioFileExtension ==
+                            global.AudioFileExtension.MP3)
+                          audioDownloadFileExtention = "mp3";
+                        if (global.currentAudioFileExtension ==
+                            global.AudioFileExtension.M4A)
+                          audioDownloadFileExtention = "m4a";
+                        if (global.currentVideoFileExtension ==
+                            global.VideoFileExtension.MOV)
+                          videoDownloadFileExtention = "mov";
+                        if (global.currentVideoFileExtension ==
+                            global.VideoFileExtension.MP4)
+                          videoDownloadFileExtention = "mp4";
+
+                        if (Platform.isMacOS ||
+                            Platform.isWindows ||
+                            Platform.isLinux) {
+                          final destination = await chooseFileDesktop(
+                              '${target.title}.${global.currentDownloadOption == global.DownloadOption.AudioOnly ? audioDownloadFileExtention : videoDownloadFileExtention}',
+                              '${global.currentDownloadOption == global.DownloadOption.AudioOnly ? "오디오" : "비디오"} 파일',
+                              [
+                                '${global.currentDownloadOption == global.DownloadOption.AudioOnly ? audioDownloadFileExtention : videoDownloadFileExtention}'
+                              ]);
+                          if (!destination.canceled) {
+                            if (global.currentDownloadOption ==
+                                global.DownloadOption.Both) {
+                              audioFile =
+                                  File("${destination.paths[0]}_audio.webm");
+                              if (audioFile.existsSync()) {
+                                audioFile.deleteSync();
+                              }
+                              audioOutput = audioFile.openWrite(
+                                  mode: FileMode.writeOnlyAppend);
+                              var audioLen = audio.size.totalBytes;
+                              var audioCount = -1;
+                              updateLogMessage("Started Download.");
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.cloud_download),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('오디오 다운로드중...'),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            Duration(days: 365),
-                          );
-                          await for (var data in audioStream) {
-                            audioCount += data.length;
-                            setState(() {
-                              global.audioProgress = double.parse(
-                                  ((audioCount / audioLen) * 100)
-                                      .toStringAsFixed(3));
-                            });
-                            audioOutput.add(data);
-                          }
-                          await audioOutput.flush();
-                          setState(() {
-                            global.audioProgress = -1;
-                          });
+                                Duration(days: 365),
+                              );
+                              await for (var data in audioStream) {
+                                audioCount += data.length;
+                                setState(() {
+                                  global.audioProgress = double.parse(
+                                      ((audioCount / audioLen) * 100)
+                                          .toStringAsFixed(3));
+                                });
+                                audioOutput.add(data);
+                              }
+                              await audioOutput.flush();
+                              setState(() {
+                                global.audioProgress = -1;
+                              });
 
-                          updateLogMessage("Audio Download Done.");
-                          _showSnackBar(
-                            Row(
-                              children: [
-                                Icon(Icons.file_download_done),
-                                SizedBox(width: 4),
-                                Flexible(
-                                  child: Text('오디오 다운로드가 완료되었습니다.'),
-                                )
-                              ],
-                            ),
-                            Duration(milliseconds: 2500),
-                          );
-                          for (var target
-                              in manifest.videoOnly.sortByVideoQuality()) {
-                            updateLogMessage("Found Video: $target");
-                          }
+                              updateLogMessage("Audio Download Done.");
+                              for (var target
+                                  in manifest.videoOnly.sortByVideoQuality()) {
+                                updateLogMessage("Found Video: $target");
+                              }
 
-                          var _video = manifest.videoOnly
-                              .sortByVideoQuality()
-                              .indexWhere((element) =>
-                                  element.toString().contains("HDR | webm"));
-                          if (_video == -1) {
-                            _video = manifest.videoOnly
-                                .sortByVideoQuality()
-                                .indexWhere((element) =>
-                                    element.toString().contains("webm"));
-                          }
-                          var video =
-                              manifest.videoOnly.sortByVideoQuality()[_video];
-                          updateLogMessage("Video Target: $video");
+                              var _video = manifest.videoOnly
+                                  .sortByVideoQuality()
+                                  .indexWhere((element) => element
+                                      .toString()
+                                      .contains("HDR | webm"));
+                              if (_video == -1) {
+                                _video = manifest.videoOnly
+                                    .sortByVideoQuality()
+                                    .indexWhere((element) =>
+                                        element.toString().contains("webm"));
+                              }
+                              var video = manifest.videoOnly
+                                  .sortByVideoQuality()[_video];
+                              updateLogMessage("Video Target: $video");
 
-                          var videoStream = yt.videos.streamsClient.get(video);
-                          updateLogMessage(
-                              "File Destination: ${destination.paths[0]}_video.webm");
-                          videoFile =
-                              File("${destination.paths[0]}_video.webm");
-                          if (videoFile.existsSync()) {
-                            videoFile.deleteSync();
-                          }
-                          videoOutput = videoFile.openWrite(
-                              mode: FileMode.writeOnlyAppend);
-                          var videoLen = video.size.totalBytes;
-                          var videoCount = 0;
-                          _showSnackBar(
-                            Row(
-                              children: [
-                                Icon(Icons.cloud_download),
-                                SizedBox(width: 4),
-                                Flexible(
-                                  child: Text('비디오 다운로드중...'),
+                              var videoStream =
+                                  yt.videos.streamsClient.get(video);
+                              videoFile =
+                                  File("${destination.paths[0]}_video.webm");
+                              if (videoFile.existsSync()) {
+                                videoFile.deleteSync();
+                              }
+                              videoOutput = videoFile.openWrite(
+                                  mode: FileMode.writeOnlyAppend);
+                              var videoLen = video.size.totalBytes;
+                              var videoCount = 0;
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.cloud_download),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('비디오 다운로드중...'),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            Duration(days: 365),
-                          );
-                          updateLogMessage("Started Download.");
-                          await for (var data in videoStream) {
-                            videoCount += data.length;
-                            setState(() {
-                              global.videoProgress = double.parse(
-                                  ((videoCount / videoLen) * 100)
-                                      .toStringAsFixed(3));
-                            });
-                            videoOutput.add(data);
-                          }
-                          await videoOutput.flush();
-
-                          setState(() {
-                            global.videoProgress = -1.0;
-                          });
-                          updateLogMessage("Video Download Done.");
-
-                          _showSnackBar(
-                            Row(
-                              children: [
-                                Icon(Icons.file_download_done),
-                                SizedBox(width: 4),
-                                Flexible(
-                                  child: Text('비디오 다운로드가 완료되었습니다.'),
+                                Duration(days: 365),
+                              );
+                              updateLogMessage("Started Download.");
+                              await for (var data in videoStream) {
+                                videoCount += data.length;
+                                setState(() {
+                                  global.videoProgress = double.parse(
+                                      ((videoCount / videoLen) * 100)
+                                          .toStringAsFixed(3));
+                                });
+                                videoOutput.add(data);
+                              }
+                              await videoOutput.flush();
+                              setState(() {
+                                global.videoProgress = -1.0;
+                              });
+                              updateLogMessage("Video Download Done.");
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.merge_type),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('인코딩중...'),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            Duration(milliseconds: 2500),
-                          );
-                          _showSnackBar(
-                            Row(
-                              children: [
-                                Icon(Icons.merge_type),
-                                SizedBox(width: 4),
-                                Flexible(
-                                  child: Text('오디오와 비디오를 합치는중...'),
-                                ),
-                              ],
-                            ),
-                            Duration(days: 365),
-                          );
-                          updateLogMessage(
-                              "Requesting directory permission...");
-                          var mergeFile = File(destination.paths[0]);
-                          if (mergeFile.existsSync()) {
-                            mergeFile.deleteSync();
-                          }
-                          await audioOutput.close();
-                          await videoOutput.close();
-                          var mergerResult = await encodeWithAudioAndVideo(
-                              audioFile.path, videoFile.path, mergeFile.path);
-                          if (!mergerResult[0]) {
-                            updateLogMessage(
-                                "Failed to merge audio and video: ${mergerResult[1]}");
-                          }
-                          global.isJobDone = true;
-                          Widget okButton = FlatButton(
-                            child: Text("확인"),
-                            onPressed: () {
-                              try {
-                                Scaffold.of(context).hideCurrentSnackBar();
-                              } catch (e) {}
-                              Navigator.pop(context);
-                            },
-                          );
+                                Duration(days: 365),
+                              );
+                              updateLogMessage(
+                                  "Requesting directory permission...");
+                              var mergeFile = File(destination.paths[0]);
+                              if (mergeFile.existsSync()) {
+                                mergeFile.deleteSync();
+                              }
+                              await audioOutput.close();
+                              await videoOutput.close();
+                              setState(() {
+                                global.isEncoding = true;
+                              });
+                              //throw ("STOP!!!");
+                              var mergerResult = await encodeWithAudioAndVideo(
+                                  audioFile.path,
+                                  videoFile.path,
+                                  mergeFile.path);
+                              setState(() {
+                                global.isEncoding = false;
+                              });
+                              if (!mergerResult[0]) {
+                                updateLogMessage(
+                                    "Failed to merge audio and video: ${mergerResult[1]}");
+                                throw ("Error: invalid FFmpeg argument.");
+                              }
+                              global.isJobDone = true;
+                              Widget okButton = FlatButton(
+                                child: Text("확인"),
+                                onPressed: () {
+                                  try {
+                                    Scaffold.of(context).hideCurrentSnackBar();
+                                  } catch (e) {}
+                                  Navigator.pop(context);
+                                },
+                              );
 
-                          AlertDialog alert = AlertDialog(
-                            title: Row(children: [
-                              Icon(Icons.file_download_done),
-                              Padding(
-                                padding: EdgeInsets.only(right: 4),
+                              AlertDialog alert = AlertDialog(
+                                title: Row(children: [
+                                  Icon(Icons.file_download_done),
+                                  Padding(
+                                    padding: EdgeInsets.only(right: 4),
+                                  ),
+                                  Text("완료"),
+                                ]),
+                                content: Text(
+                                    "비디오가 ${destination.paths[0]}에 저장되었습니다."),
+                                actions: [
+                                  okButton,
+                                ],
+                              );
+
+                              return showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (BuildContext context) {
+                                  return alert;
+                                },
+                              );
+                            }
+                            if (global.currentDownloadOption ==
+                                global.DownloadOption.AudioOnly) {
+                              audioFile =
+                                  File("${destination.paths[0]}_audio.webm");
+                              if (audioFile.existsSync()) {
+                                audioFile.deleteSync();
+                              }
+                              audioOutput = audioFile.openWrite(
+                                  mode: FileMode.writeOnlyAppend);
+                              var audioLen = audio.size.totalBytes;
+                              var audioCount = -1;
+                              updateLogMessage("Started Download.");
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.cloud_download),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('오디오 다운로드중...'),
+                                    ),
+                                  ],
+                                ),
+                                Duration(days: 365),
+                              );
+                              await for (var data in audioStream) {
+                                audioCount += data.length;
+                                setState(() {
+                                  global.audioProgress = double.parse(
+                                      ((audioCount / audioLen) * 100)
+                                          .toStringAsFixed(3));
+                                });
+                                audioOutput.add(data);
+                              }
+                              await audioOutput.flush();
+                              setState(() {
+                                global.audioProgress = -1;
+                              });
+
+                              updateLogMessage("Audio Download Done.");
+
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.merge_type),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('인코딩중...'),
+                                    ),
+                                  ],
+                                ),
+                                Duration(days: 365),
+                              );
+                              updateLogMessage(
+                                  "Requesting directory permission...");
+                              var mergeFile = File(destination.paths[0]);
+                              if (mergeFile.existsSync()) {
+                                mergeFile.deleteSync();
+                              }
+                              await audioOutput.close();
+                              setState(() {
+                                global.isEncoding = true;
+                              });
+                              var audioEncodeResult = await encodeWithAudioOnly(
+                                  audioFile.path, mergeFile.path);
+                              setState(() {
+                                global.isEncoding = false;
+                              });
+                              if (!audioEncodeResult[0]) {
+                                updateLogMessage(
+                                    "Failed to encode audio: ${audioEncodeResult[1]}");
+                                throw ("Error: invalid FFmpeg argument.");
+                              }
+                              global.isJobDone = true;
+                              Widget okButton = FlatButton(
+                                child: Text("확인"),
+                                onPressed: () {
+                                  try {
+                                    Scaffold.of(context).hideCurrentSnackBar();
+                                  } catch (e) {}
+                                  Navigator.pop(context);
+                                },
+                              );
+
+                              AlertDialog alert = AlertDialog(
+                                title: Row(children: [
+                                  Icon(Icons.file_download_done),
+                                  Padding(
+                                    padding: EdgeInsets.only(right: 4),
+                                  ),
+                                  Text("완료"),
+                                ]),
+                                content: Text(
+                                    "오디오가 ${destination.paths[0]}에 저장되었습니다."),
+                                actions: [
+                                  okButton,
+                                ],
+                              );
+
+                              return showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (BuildContext context) {
+                                  return alert;
+                                },
+                              );
+                            }
+                            if (global.currentDownloadOption ==
+                                global.DownloadOption.VideoOnly) {
+                              for (var target
+                                  in manifest.videoOnly.sortByVideoQuality()) {
+                                updateLogMessage("Found Video: $target");
+                              }
+
+                              var _video = manifest.videoOnly
+                                  .sortByVideoQuality()
+                                  .indexWhere((element) => element
+                                      .toString()
+                                      .contains("HDR | webm"));
+                              if (_video == -1) {
+                                _video = manifest.videoOnly
+                                    .sortByVideoQuality()
+                                    .indexWhere((element) =>
+                                        element.toString().contains("webm"));
+                              }
+                              var video = manifest.videoOnly
+                                  .sortByVideoQuality()[_video];
+                              updateLogMessage("Video Target: $video");
+
+                              var videoStream =
+                                  yt.videos.streamsClient.get(video);
+                              videoFile =
+                                  File("${destination.paths[0]}_video.webm");
+                              if (videoFile.existsSync()) {
+                                videoFile.deleteSync();
+                              }
+                              videoOutput = videoFile.openWrite(
+                                  mode: FileMode.writeOnlyAppend);
+                              var videoLen = video.size.totalBytes;
+                              var videoCount = 0;
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.cloud_download),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('비디오 다운로드중...'),
+                                    ),
+                                  ],
+                                ),
+                                Duration(days: 365),
+                              );
+                              updateLogMessage("Started Download.");
+                              await for (var data in videoStream) {
+                                videoCount += data.length;
+                                setState(() {
+                                  global.videoProgress = double.parse(
+                                      ((videoCount / videoLen) * 100)
+                                          .toStringAsFixed(3));
+                                });
+                                videoOutput.add(data);
+                              }
+                              await videoOutput.flush();
+                              setState(() {
+                                global.videoProgress = -1.0;
+                              });
+                              updateLogMessage("Video Download Done.");
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.merge_type),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('인코딩중...'),
+                                    ),
+                                  ],
+                                ),
+                                Duration(days: 365),
+                              );
+                              updateLogMessage(
+                                  "Requesting directory permission...");
+                              var mergeFile = File(destination.paths[0]);
+                              if (mergeFile.existsSync()) {
+                                mergeFile.deleteSync();
+                              }
+                              await videoOutput.close();
+                              setState(() {
+                                global.isEncoding = true;
+                              });
+                              var videoEncodeResult = await encodeWithVideoOnly(
+                                  videoFile.path, mergeFile.path);
+                              setState(() {
+                                global.isEncoding = false;
+                              });
+                              if (!videoEncodeResult[0]) {
+                                updateLogMessage(
+                                    "Failed to encode video: ${videoEncodeResult[1]}");
+                                throw ("Error: invalid FFmpeg argument.");
+                              }
+                              global.isJobDone = true;
+                              Widget okButton = FlatButton(
+                                child: Text("확인"),
+                                onPressed: () {
+                                  try {
+                                    Scaffold.of(context).hideCurrentSnackBar();
+                                  } catch (e) {}
+                                  Navigator.pop(context);
+                                },
+                              );
+
+                              AlertDialog alert = AlertDialog(
+                                title: Row(children: [
+                                  Icon(Icons.file_download_done),
+                                  Padding(
+                                    padding: EdgeInsets.only(right: 4),
+                                  ),
+                                  Text("완료"),
+                                ]),
+                                content: Text(
+                                    "비디오가 ${destination.paths[0]}에 저장되었습니다."),
+                                actions: [
+                                  okButton,
+                                ],
+                              );
+
+                              return showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (BuildContext context) {
+                                  return alert;
+                                },
+                              );
+                            }
+                          } else {
+                            global.isJobDone = true;
+                            return _showSnackBar(
+                              Row(
+                                children: [
+                                  Icon(Icons.cancel),
+                                  SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text('다운로드가 취소되었습니다.'),
+                                  )
+                                ],
                               ),
-                              Text("완료"),
-                            ]),
-                            content:
-                                Text("영상이 ${destination.paths[0]}에 저장되었습니다."),
-                            actions: [
-                              okButton,
-                            ],
-                          );
+                              Duration(milliseconds: 2500),
+                            );
+                          }
+                        }
+                        if (Platform.isAndroid || Platform.isIOS) {
+                          var fileName = target.title
+                              .replaceAll(r'\', '')
+                              .replaceAll('/', '')
+                              .replaceAll('*', '')
+                              .replaceAll('?', '')
+                              .replaceAll('"', '')
+                              .replaceAll('<', '')
+                              .replaceAll('>', '')
+                              .replaceAll('|', '');
+                          var mobileSaveRequest = await getMobileLocalFolder();
+                          if (mobileSaveRequest[0]) {
+                            var destinationDirectory =
+                                mobileSaveRequest[1].path;
+                            if (global.currentDownloadOption ==
+                                global.DownloadOption.Both) {
+                              audioFile = File(
+                                  "$destinationDirectory/${fileName}_audio.webm");
+                              if (audioFile.existsSync()) {
+                                audioFile.deleteSync();
+                              }
+                              audioOutput = audioFile.openWrite(
+                                  mode: FileMode.writeOnlyAppend);
+                              var audioLen = audio.size.totalBytes;
+                              var audioCount = -1;
+                              updateLogMessage("Started Download.");
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.cloud_download),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('오디오 다운로드중...'),
+                                    ),
+                                  ],
+                                ),
+                                Duration(days: 365),
+                              );
+                              await for (var data in audioStream) {
+                                audioCount += data.length;
+                                setState(() {
+                                  global.audioProgress = double.parse(
+                                      ((audioCount / audioLen) * 100)
+                                          .toStringAsFixed(3));
+                                });
+                                audioOutput.add(data);
+                              }
+                              await audioOutput.flush();
+                              setState(() {
+                                global.audioProgress = -1;
+                              });
 
-                          return showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (BuildContext context) {
-                              return alert;
-                            },
-                          );
-                        } else {
-                          global.isJobDone = true;
-                          return _showSnackBar(
-                            Row(
-                              children: [
-                                Icon(Icons.cancel),
-                                SizedBox(width: 4),
-                                Flexible(
-                                  child: Text('다운로드가 취소되었습니다.'),
-                                )
+                              updateLogMessage("Audio Download Done.");
+                              for (var target
+                                  in manifest.videoOnly.sortByVideoQuality()) {
+                                updateLogMessage("Found Video: $target");
+                              }
+
+                              var _video = manifest.videoOnly
+                                  .sortByVideoQuality()
+                                  .indexWhere((element) => element
+                                      .toString()
+                                      .contains("HDR | webm"));
+                              if (_video == -1) {
+                                _video = manifest.videoOnly
+                                    .sortByVideoQuality()
+                                    .indexWhere((element) =>
+                                        element.toString().contains("webm"));
+                              }
+                              var video = manifest.videoOnly
+                                  .sortByVideoQuality()[_video];
+                              updateLogMessage("Video Target: $video");
+
+                              var videoStream =
+                                  yt.videos.streamsClient.get(video);
+                              videoFile = File(
+                                  "$destinationDirectory/${fileName}_video.webm");
+                              if (videoFile.existsSync()) {
+                                videoFile.deleteSync();
+                              }
+                              videoOutput = videoFile.openWrite(
+                                  mode: FileMode.writeOnlyAppend);
+                              var videoLen = video.size.totalBytes;
+                              var videoCount = 0;
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.cloud_download),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('비디오 다운로드중...'),
+                                    ),
+                                  ],
+                                ),
+                                Duration(days: 365),
+                              );
+                              updateLogMessage("Started Download.");
+                              await for (var data in videoStream) {
+                                videoCount += data.length;
+                                setState(() {
+                                  global.videoProgress = double.parse(
+                                      ((videoCount / videoLen) * 100)
+                                          .toStringAsFixed(3));
+                                });
+                                videoOutput.add(data);
+                              }
+                              await videoOutput.flush();
+
+                              setState(() {
+                                global.videoProgress = -1.0;
+                              });
+                              updateLogMessage("Video Download Done.");
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.merge_type),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('인코딩중...'),
+                                    ),
+                                  ],
+                                ),
+                                Duration(days: 365),
+                              );
+                              updateLogMessage(
+                                  "Requesting directory permission...");
+                              var mergeFile = File(
+                                  "$destinationDirectory/$fileName.${global.currentDownloadOption == global.DownloadOption.AudioOnly ? audioDownloadFileExtention : videoDownloadFileExtention}");
+                              if (mergeFile.existsSync()) {
+                                mergeFile.deleteSync();
+                              }
+                              await audioOutput.close();
+                              await videoOutput.close();
+                              setState(() {
+                                global.isEncoding = true;
+                              });
+                              var mergerResult = await encodeWithAudioAndVideo(
+                                  audioFile.path,
+                                  videoFile.path,
+                                  mergeFile.path);
+                              setState(() {
+                                global.isEncoding = false;
+                              });
+                              if (!mergerResult[0]) {
+                                updateLogMessage(
+                                    "Failed to merge audio and video: ${mergerResult[1]}");
+                              }
+                              global.isJobDone = true;
+                              Widget okButton = FlatButton(
+                                child: Text("확인"),
+                                onPressed: () {
+                                  try {
+                                    Scaffold.of(context).hideCurrentSnackBar();
+                                  } catch (e) {}
+                                  Navigator.pop(context);
+                                },
+                              );
+                              AlertDialog alert = AlertDialog(
+                                title: Row(children: [
+                                  Icon(Icons.file_download_done),
+                                  Padding(
+                                    padding: EdgeInsets.only(right: 4),
+                                  ),
+                                  Text("완료"),
+                                ]),
+                                content: Text(
+                                    "영상이 ${Platform.isAndroid ? "다운로드" : "파일 > Youtility"} > $fileName.${global.currentDownloadOption == global.DownloadOption.AudioOnly ? audioDownloadFileExtention : videoDownloadFileExtention}에 저장되었습니다."),
+                                actions: [
+                                  okButton,
+                                ],
+                              );
+
+                              return showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (BuildContext context) {
+                                  return alert;
+                                },
+                              );
+                            }
+                            if (global.currentDownloadOption ==
+                                global.DownloadOption.AudioOnly) {
+                              audioFile = File(
+                                  "$destinationDirectory/${fileName}_audio.webm");
+                              if (audioFile.existsSync()) {
+                                audioFile.deleteSync();
+                              }
+                              audioOutput = audioFile.openWrite(
+                                  mode: FileMode.writeOnlyAppend);
+                              var audioLen = audio.size.totalBytes;
+                              var audioCount = -1;
+                              updateLogMessage("Started Download.");
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.cloud_download),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('오디오 다운로드중...'),
+                                    ),
+                                  ],
+                                ),
+                                Duration(days: 365),
+                              );
+                              await for (var data in audioStream) {
+                                audioCount += data.length;
+                                setState(() {
+                                  global.audioProgress = double.parse(
+                                      ((audioCount / audioLen) * 100)
+                                          .toStringAsFixed(3));
+                                });
+                                audioOutput.add(data);
+                              }
+                              await audioOutput.flush();
+                              setState(() {
+                                global.audioProgress = -1;
+                              });
+
+                              updateLogMessage("Audio Download Done.");
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.merge_type),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('인코딩중...'),
+                                    ),
+                                  ],
+                                ),
+                                Duration(days: 365),
+                              );
+                              updateLogMessage(
+                                  "Requesting directory permission...");
+                              var mergeFile = File(
+                                  "$destinationDirectory/$fileName.${global.currentDownloadOption == global.DownloadOption.AudioOnly ? audioDownloadFileExtention : videoDownloadFileExtention}");
+                              if (mergeFile.existsSync()) {
+                                mergeFile.deleteSync();
+                              }
+                              await audioOutput.close();
+                              setState(() {
+                                global.isEncoding = true;
+                              });
+                              var mergerResult = await encodeWithAudioOnly(
+                                  audioFile.path, mergeFile.path);
+                              setState(() {
+                                global.isEncoding = false;
+                              });
+                              if (!mergerResult[0]) {
+                                updateLogMessage(
+                                    "Failed to encode audio: ${mergerResult[1]}");
+                              }
+                              global.isJobDone = true;
+                              Widget okButton = FlatButton(
+                                child: Text("확인"),
+                                onPressed: () {
+                                  try {
+                                    Scaffold.of(context).hideCurrentSnackBar();
+                                  } catch (e) {}
+                                  Navigator.pop(context);
+                                },
+                              );
+                              AlertDialog alert = AlertDialog(
+                                title: Row(children: [
+                                  Icon(Icons.file_download_done),
+                                  Padding(
+                                    padding: EdgeInsets.only(right: 4),
+                                  ),
+                                  Text("완료"),
+                                ]),
+                                content: Text(
+                                    "오디오가 ${Platform.isAndroid ? "다운로드" : "파일 > Youtility"} > $fileName.${global.currentDownloadOption == global.DownloadOption.AudioOnly ? audioDownloadFileExtention : videoDownloadFileExtention}에 저장되었습니다."),
+                                actions: [
+                                  okButton,
+                                ],
+                              );
+
+                              return showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (BuildContext context) {
+                                  return alert;
+                                },
+                              );
+                            }
+                            if (global.currentDownloadOption ==
+                                global.DownloadOption.VideoOnly) {
+                              for (var target
+                                  in manifest.videoOnly.sortByVideoQuality()) {
+                                updateLogMessage("Found Video: $target");
+                              }
+
+                              var _video = manifest.videoOnly
+                                  .sortByVideoQuality()
+                                  .indexWhere((element) => element
+                                      .toString()
+                                      .contains("HDR | webm"));
+                              if (_video == -1) {
+                                _video = manifest.videoOnly
+                                    .sortByVideoQuality()
+                                    .indexWhere((element) =>
+                                        element.toString().contains("webm"));
+                              }
+                              var video = manifest.videoOnly
+                                  .sortByVideoQuality()[_video];
+                              updateLogMessage("Video Target: $video");
+
+                              var videoStream =
+                                  yt.videos.streamsClient.get(video);
+                              videoFile = File(
+                                  "$destinationDirectory/${fileName}_video.webm");
+                              if (videoFile.existsSync()) {
+                                videoFile.deleteSync();
+                              }
+                              videoOutput = videoFile.openWrite(
+                                  mode: FileMode.writeOnlyAppend);
+                              var videoLen = video.size.totalBytes;
+                              var videoCount = 0;
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.cloud_download),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('비디오 다운로드중...'),
+                                    ),
+                                  ],
+                                ),
+                                Duration(days: 365),
+                              );
+                              updateLogMessage("Started Download.");
+                              await for (var data in videoStream) {
+                                videoCount += data.length;
+                                setState(() {
+                                  global.videoProgress = double.parse(
+                                      ((videoCount / videoLen) * 100)
+                                          .toStringAsFixed(3));
+                                });
+                                videoOutput.add(data);
+                              }
+                              await videoOutput.flush();
+                              setState(() {
+                                global.videoProgress = -1.0;
+                              });
+                              updateLogMessage("Video Download Done.");
+                              _showSnackBar(
+                                Row(
+                                  children: [
+                                    Icon(Icons.merge_type),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text('인코딩중...'),
+                                    ),
+                                  ],
+                                ),
+                                Duration(days: 365),
+                              );
+                              updateLogMessage(
+                                  "Requesting directory permission...");
+                              var mergeFile = File(
+                                  "$destinationDirectory/$fileName.${global.currentDownloadOption == global.DownloadOption.AudioOnly ? audioDownloadFileExtention : videoDownloadFileExtention}");
+                              if (mergeFile.existsSync()) {
+                                mergeFile.deleteSync();
+                              }
+                              await videoOutput.close();
+                              setState(() {
+                                global.isEncoding = true;
+                              });
+                              var mergerResult = await encodeWithVideoOnly(
+                                  videoFile.path, mergeFile.path);
+                              setState(() {
+                                global.isEncoding = false;
+                              });
+                              if (!mergerResult[0]) {
+                                updateLogMessage(
+                                    "Failed to encode video: ${mergerResult[1]}");
+                              }
+                              global.isJobDone = true;
+                              Widget okButton = FlatButton(
+                                child: Text("확인"),
+                                onPressed: () {
+                                  try {
+                                    Scaffold.of(context).hideCurrentSnackBar();
+                                  } catch (e) {}
+                                  Navigator.pop(context);
+                                },
+                              );
+                              AlertDialog alert = AlertDialog(
+                                title: Row(children: [
+                                  Icon(Icons.file_download_done),
+                                  Padding(
+                                    padding: EdgeInsets.only(right: 4),
+                                  ),
+                                  Text("완료"),
+                                ]),
+                                content: Text(
+                                    "비디오가 ${Platform.isAndroid ? "다운로드" : "파일 > Youtility"} > $fileName.${global.currentDownloadOption == global.DownloadOption.AudioOnly ? audioDownloadFileExtention : videoDownloadFileExtention}에 저장되었습니다."),
+                                actions: [
+                                  okButton,
+                                ],
+                              );
+
+                              return showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (BuildContext context) {
+                                  return alert;
+                                },
+                              );
+                            }
+                            //jiji
+                          } else {
+                            setState(() {
+                              global.audioProgress = -1;
+                              global.videoProgress = -1;
+                              global.isJobDone = true;
+                            });
+                            Widget okButton = FlatButton(
+                              child: Text("확인"),
+                              onPressed: () {
+                                try {
+                                  Scaffold.of(context).hideCurrentSnackBar();
+                                } catch (e) {}
+                                Navigator.pop(context);
+                              },
+                            );
+                            Widget goSettingsButton = FlatButton(
+                              child: Text("설정 열기"),
+                              onPressed: () {
+                                try {
+                                  Scaffold.of(context).hideCurrentSnackBar();
+                                } catch (e) {}
+                                openAppSettings();
+                                Navigator.pop(context);
+                              },
+                            );
+                            AlertDialog alert = AlertDialog(
+                              title: Row(children: [
+                                Icon(Icons.error),
+                                Padding(
+                                  padding: EdgeInsets.only(right: 4),
+                                ),
+                                Text("오류"),
+                              ]),
+                              content: Text(
+                                  "권한이 부족하여 진행할 수 없습니다.\n설정 앱에서 수동으로 권한을 부여한 후, 재시도 해주세요."),
+                              actions: [
+                                goSettingsButton,
+                                okButton,
                               ],
-                            ),
-                            Duration(milliseconds: 2500),
-                          );
+                            );
+
+                            return showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (BuildContext context) {
+                                return alert;
+                              },
+                            );
+                          }
                         }
                       } catch (e) {
                         updateLogMessage("Error Occured: $e");
@@ -633,7 +1365,8 @@ class _ContentState extends State<Content> {
                               ),
                               Text("오류"),
                             ]),
-                            content: Text("다운로드를 시도하는중 오류가 발생했습니다.\n$e"),
+                            content: Text(
+                                "다운로드를 시도하는중 오류가 발생했습니다. 다시 시도해주세요.\n오류 내용: $e"),
                             actions: [
                               okButton,
                             ],
@@ -641,7 +1374,12 @@ class _ContentState extends State<Content> {
                         }
 
                         // show the dialog
-                        global.isJobDone = true;
+                        setState(() {
+                          global.isEncoding = false;
+                          global.isJobDone = true;
+                          global.audioProgress = -1;
+                          global.videoProgress = -1;
+                        });
                         return showDialog(
                           context: context,
                           barrierDismissible: false,
@@ -673,21 +1411,19 @@ class _ContentState extends State<Content> {
                               } else if (Platform.isMacOS || Platform.isLinux) {
                                 await run("killall", ["ffmpeg"],
                                     verbose: false);
-                              } else if (Platform.isAndroid || Platform.isIOS) {
-                                if (global.ffmpegExecutionId == null) {
-                                } else {
-                                  await stopMobileFFmpeg(
-                                      global.ffmpegExecutionId);
-                                }
                               }
                             } catch (e) {}
                             Navigator.pop(context);
                             setState(() {
                               global.audioProgress = -1;
                               global.videoProgress = -1;
+                              global.isJobDone = true;
+                              global.isEncoding = false;
                             });
-                            global.isJobDone = true;
                             Phoenix.rebirth(context);
+                            if (Platform.isAndroid || Platform.isIOS) {
+                              await stopMobileFFmpeg();
+                            }
                           },
                         );
                         Widget cancelButton = FlatButton(
@@ -737,11 +1473,6 @@ class _ContentState extends State<Content> {
                             Navigator.pop(context);
                           },
                         );
-                        Widget copyLogButton = FlatButton(
-                          child: Text("클립보드로 로그 복사하기"),
-                          onPressed: () async =>
-                              {await clippy.write(global.logMessage)},
-                        );
                         Widget clearLogButton = FlatButton(
                           child: Text("로그 초기화"),
                           onPressed: () => {clearLogMessage()},
@@ -789,7 +1520,6 @@ class _ContentState extends State<Content> {
                           ),
                           actions: [
                             clearLogButton,
-                            copyLogButton,
                             okButton,
                           ],
                         );
